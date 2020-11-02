@@ -14,41 +14,41 @@
 #checking if nexus tar file already present
 - name: Check that the somefile.conf exists
   stat:
-    path: "{{ workspace }}/{{nexus_version_directory}}-unix.tar.gz"
+    path: "{{ workspace }}/{{ nexus_version_directory }}-unix.tar.gz"
   register: stat_result
 #downloading nexus tar file
 - name: Download nexus
   get_url:
     url: "{{ nexus_download_url }}"
-    dest: "{{ workspace }}/{{nexus_version_directory}}-unix.tar.gz"
+    dest: "{{ workspace }}/{{ nexus_version_directory }}-unix.tar.gz"
     validate_certs: "{{ nexus_download_validate_certs }}"
   when: not stat_result.stat.exists
 - name: Untar nexus
   unarchive:
-    src: "{{ workspace }}/{{nexus_version_directory}}-unix.tar.gz"
+    src: "{{ workspace }}/{{ nexus_version_directory }}-unix.tar.gz"
     dest: /usr/local/
     remote_src: yes
 # change ownership of nexus directories to nexus user
 - name: change ownership of nexus directory
   file:
-    path: /usr/local/{{item}}
+    path: /usr/local/{{ item }}
     state: directory
     recurse: yes
     owner: nexus
     group: nexus
     mode: 0777
   loop:
-    - "{{nexus_version_directory}}"
+    - "{{ nexus_version_directory }}"
     - sonatype-work
 - name: Configure to run as the nexus user
   lineinfile:
-    path: "/usr/local/{{nexus_version_directory}}/bin/nexus.rc"
+    path: "/usr/local/{{ nexus_version_directory }}/bin/nexus.rc"
     regexp: 'run_as_user= "nexus"'
     insertafter: "#run_as_user="
     line: 'run_as_user= "nexus"'
 - name: symlink nexus for init.d
   file:
-        src: "/usr/local/{{nexus_version_directory}}/bin/nexus"
+        src: "/usr/local/{{ nexus_version_directory }}/bin/nexus"
         dest: "/etc/init.d/nexus"
         state: link
         owner: nexus
