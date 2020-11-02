@@ -1,0 +1,19 @@
+---
+workspace: /opt
+nexus_download_validate_certs: true
+
+# Default to the latest LTS release.
+nexus_version: 3.27.0-03
+nexus_download_url: "https://sonatype-download.global.ssl.fastly.net/repository/downloads-prod-group/3/nexus-{{nexus_version}}-unix.tar.gz"
+nexus_version_directory: "nexus-{{ nexus_version }}"
+nexus_data_dir: /usr/local/sonatype-work/nexus3/
+nexus_api_scheme: http
+nexus_api_hostname: localhost
+nexus_api_port: 8081
+nexus_api_context_path: '/'
+nexus_rest_api_endpoint: "service/rest/v1/script"
+nexus_api_validate_certs: true
+nexus_admin_password: admin228
+nexus_default_settings_file: "/usr/local/sonatype-work/nexus3/etc/nexus.properties"
+nexus_configuration_allow_anonymous: false
+...

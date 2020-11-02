@@ -1,0 +1,97 @@
+---
+- name: "Enable creating groovy scripts in nexus"
+  lineinfile:
+    dest: "{{ nexus_default_settings_file }}"
+    regexp: "^nexus.scripts.allowCreation=.*"
+    line: "nexus.scripts.allowCreation=true"
+
+- name: restart nexus
+  become_user: nexus
+  become_method: sudo
+  systemd:
+    state: restarted
+    enabled: yes
+    daemon_reload: yes
+    name: nexus
+- name: Wait for nexus to start
+  wait_for:
+    host=localhost
+    port=8081
+    delay=20
+    timeout=300
+- name: setting path of psswd file
+  stat:
+    path: "{{ nexus_data_dir }}/admin.password"
+  register: p
+# setting up nexus for the first time 
+- name: get generated admin password
+  block:
+
+    - name: Slurp content of remote generated password
+      slurp:
+        src: "{{ nexus_data_dir }}/admin.password"
+      register: slurpedpass
+
+    - name: Set default password from slurped content
+      set_fact:
+        nexus_default_admin_password: "{{ slurpedpass.content | b64decode }}"
+    - debug:
+         var: nexus_default_admin_password
+
+    - name: Access scripts API endpoint with default admin password
+      uri:
+       url: "{{ nexus_api_scheme }}://{{ nexus_api_hostname }}:{{ nexus_api_port }}\
+       {{ nexus_api_context_path }}{{ nexus_rest_api_endpoint }}"
+       method: 'HEAD'
+       user: 'admin'
+       password: "{{ nexus_default_admin_password }}"
+       force_basic_auth: yes
+       status_code: 200, 401
+       validate_certs: "{{ nexus_api_validate_certs }}"
+      register: nexus_api_head_with_default_password
+
+    - name: Register default admin password for next operations
+      set_fact:
+         current_nexus_admin_password: "{{ nexus_default_admin_password }}"
+      when: (nexus_api_head_with_default_password.status | default(false)) == 200
+
+    - name: Change admin password if we are still using default
+      block:
+        - include_tasks: script_call.yml
+          vars:
+           script_name: update_admin_password
+           args:
+            new_password: "{{ nexus_admin_password }}"
+    - name: Clear generated password file from install (nexus > 3.17)
+      file:
+        path: "{{ nexus_data_dir }}/admin.password"
+        state: absent
+      when: (nexus_api_head_with_default_password.status | default(false)) == 200
+  when: p.stat.exists
+- name: Admin password changed
+  set_fact:
+     current_nexus_admin_password: "{{ nexus_admin_password }}"
+  no_log: true
+
+
+- name: Set Nexus anonymous access
+  block:
+    - include_tasks: script_call.yml
+      vars:
+        admin_password: "{{current_nexus_admin_password}}"
+        script_name: security_anonymous_access
+        args:
+          enabled: "{{ nexus_configuration_allow_anonymous }}"
+# creating a repo for maven snapshots
+- name: create repo for maven
+  block:
+    - include_tasks: script_call.yml
+      vars:
+        script_name: create_repo_maven_hosted
+        args:
+          name: my_maven
+          write_policy: allow
+          strict_content_validation: true
+          version_policy: snapshot
+          layout_policy: strict
+...
