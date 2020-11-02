@@ -78,7 +78,7 @@
   block:
     - include_tasks: script_call.yml
       vars:
-        admin_password: "{{current_nexus_admin_password}}"
+        admin_password: "{{ current_nexus_admin_password }}"
         script_name: security_anonymous_access
         args:
           enabled: "{{ nexus_configuration_allow_anonymous }}"
